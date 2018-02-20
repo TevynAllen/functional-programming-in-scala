@@ -308,4 +308,8 @@ object List { // List companion object
       case (_, Nil) => Nil
       case (Cons(h, t), Cons(a, b)) => Cons(f(h, a), mergeTwoListWithFunction(t, b)(f))
     }
+
+  /**
+    * EXERCISE 24
+    */
 }
