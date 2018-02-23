@@ -58,7 +58,7 @@ log
 logs
 modules
 /out
-precompiled
+precompileds
 /.project
 project/project
 project/target
