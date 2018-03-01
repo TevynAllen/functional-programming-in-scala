@@ -1,0 +1,5 @@
+package handlingerrors
+
+class Either {
+
+}

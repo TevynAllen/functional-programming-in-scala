@@ -76,6 +76,12 @@ object Option {
       case h :: t => h flatMap(head => sequence(t) map(tt => head :: tt))
     }
 
-  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = ???
-
+  /**
+    * EXERCISE 6
+    */
+  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
+    a match {
+      case Nil => None
+      case h :: t => map2(f(h), traverse(t)(f))(_ :: _)
+    }
 }
