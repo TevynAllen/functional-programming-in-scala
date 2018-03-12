@@ -1,5 +1,12 @@
 package handlingerrors
 
+/**
+  * Either data type has many purposes -
+  * 1. lets us track the reason for the failure
+  * 2. to encode one of two possibilities, in cases where it isn't worth defining a fresh data type
+  */
+
+
 sealed trait Either[+E, +A] {
   /**
     *EXERCISE 7 - Implement versions of map, flatMap, orElse, and map2
@@ -48,6 +55,16 @@ object Either {
     * EXERCISE 8 - Implement sequence and traverse for Either.
     */
 
-  def traverse[E,A,B](es: List[A])(f: A => Either[E, B]): Either[E, List[B]] = ???
+  // combine a list of Either into one Either containing a list of all the Right values in the list
+  // if the original list contains Left(..) once the result of the function should be Left...
+  // otherwise the result should be Right with the list of all values
+  def sequence[E,A](es: List[Either[E, A]]): Either[E, List[A]] = ???
+
+
+  def traverse[E,A,B](es: List[A])(f: A => Either[E, B]): Either[E, List[B]] =
+    es match {
+      case h :: t => (f(h) map2 traverse(t)(f))((a, b) => a :: b)
+      case Nil => Right(Nil)
+    }
 
 }
