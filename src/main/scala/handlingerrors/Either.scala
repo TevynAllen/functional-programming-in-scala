@@ -58,7 +58,7 @@ object Either {
   // combine a list of Either into one Either containing a list of all the Right values in the list
   // if the original list contains Left(..) once the result of the function should be Left...
   // otherwise the result should be Right with the list of all values
-  def sequence[E,A](es: List[Either[E, A]]): Either[E, List[A]] = ???
+  def sequence[E,A](es: List[Either[E, A]]): Either[E, List[A]] = traverse(es)(b => b)
 
 
   def traverse[E,A,B](es: List[A])(f: A => Either[E, B]): Either[E, List[B]] =
@@ -67,4 +67,12 @@ object Either {
       case Nil => Right(Nil)
     }
 
-}
+  /**
+    * EXERCISE 9
+    */
+
+  /*
+    * You can create a new type similar to Either but intead return a collection of errors if the reuslt if Left
+    * Or can change the map2 function to return an the error that has been thrown
+    */
+  }
