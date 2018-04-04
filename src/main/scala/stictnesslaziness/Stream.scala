@@ -1,5 +1,7 @@
 package stictnesslaziness
 
+import Stream._
+
 trait Stream[+A] {
   /**
     * EXERCISE 1
@@ -16,7 +18,10 @@ trait Stream[+A] {
   /**
     * EXERCISE 2
     */
-  def take(n: Int): Stream[A] = ???
+  def take(n: Int): Stream[A] = this match {
+    case Cons(h, t) if n < 0 => cons(h(), t().take(n - 1))
+    case _ => Empty
+  }
 
 }
 
