@@ -80,6 +80,61 @@ trait Stream[+A] {
 
   def flatMap[B](f: A => Stream[B]): Stream[B] =
     foldRight(empty[B])((h, t) => f(h) append t)
+
+  val ones: Stream[Int] = cons(1, ones)
+
+  /**
+    * EXERCISE 7
+    */
+  def constant[A](a: A): Stream[A] = {
+    lazy val c = cons(a, c)
+    c
+  }
+
+  /**
+    * EXERCISE 8
+    */
+  def from(n: Int): Stream[Int] = cons(n, from(n + 1))
+
+  /**
+    * EXERCISE 9
+    */
+  def fibs: Stream[Int] = {
+    def go(f1: Int, f2: Int): Stream[Int] = {
+      cons(f1, go(f2, f1+f2) )
+    }
+    go(0, 1)
+  }
+
+  /**
+    * EXERCISE 10
+    */
+  def unfold[A, S](z: S)(f: S => Option[A]): Stream[A] =
+    f(z) match {
+      case Some((h, t)) => cons(h, unfold(t)(f))
+      case None => empty
+    }
+
+  /**
+    * EXERCISE 11
+    */
+
+  def fibsWithUnfold = unfold((0, 1)){
+    case (f1, f2) => Some((f1, f2, f1 + f2))
+  }
+
+  def fromWithUnfold(n: Int) = unfold(n)(i => Some((i, i + 1)))
+
+  def constantWithUnfold[A](a: A) = unfold(a)(a => Some((a, a)))
+
+  def onesWithUnfold = unfold(1)(one => Some((one, one)))
+
+  /**
+    * EXERCISE 12
+    */
+
+  def mapWithUnfold[B](f: A => B) = ???
+
 }
 
 case object Empty extends Stream[Nothing]
