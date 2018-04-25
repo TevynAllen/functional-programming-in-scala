@@ -312,4 +312,12 @@ object List { // List companion object
   /**
     * EXERCISE 24
     */
+
+  def hasSubsequence[A](l: List[A], sub: List[A]): Boolean = {
+    (l, sub) match {
+      case (Cons(h, t), Cons(h2, t2)) if h == h2 => hasSubsequence(t, t2)
+      case (_, Nil) => true
+      case (Nil, _) => false
+    }
+  }
 }

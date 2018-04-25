@@ -107,20 +107,11 @@ trait Stream[+A] {
   }
 
   /**
-    * EXERCISE 10
-    */
-  def unfold[A, S](z: S)(f: S => Option[A]): Stream[A] =
-    f(z) match {
-      case Some((h, t)) => cons(h, unfold(t)(f))
-      case None => empty
-    }
-
-  /**
     * EXERCISE 11
     */
 
   def fibsWithUnfold = unfold((0, 1)){
-    case (f1, f2) => Some((f1, f2, f1 + f2))
+    case (f1, f2) => Some((f1, (f2, f1 + f2)))
   }
 
   def fromWithUnfold(n: Int) = unfold(n)(i => Some((i, i + 1)))
@@ -133,7 +124,46 @@ trait Stream[+A] {
     * EXERCISE 12
     */
 
-  def mapWithUnfold[B](f: A => B) = ???
+  def mapWithUnfold[B](f: A => B): Stream[B] =
+    unfold(this){
+      case Cons(h, t) => Some((f(h()), t()))
+      case _ => None
+    }
+
+  def takeWithUnfold(n: Int): Stream[A] =
+    unfold((this, n)){
+      case (Cons(h, t), n) if n > 1 => Some((h(), (t(), n - 1)))
+      case (Cons(h, _), 1) => Some((h(), (empty, 0)))
+      case _ => None
+    }
+
+  def takeWhileWithUnfold(p: A => Boolean): Stream[A] =
+    unfold(this){
+      case Cons(h, t) if(p(h)) => Some((h(), t()))
+      case _ => None
+    }
+
+  def zipWithUnfold[B, C](s2: Stream[B])(f: (A, B) => C): Stream[C] =
+    unfold((this, s2)){
+      case (Cons(h, t), Cons(h2, t2)) => Some((f(h(), h2()), (t(), t2())))
+      case _ => None
+    }
+
+  def zipAllWithUnfold[B, C](s2: Stream[B])(f: (Option[A], Option[B]) => C): Stream[C] =
+    unfold((this, s2)){
+      case (Cons(h, t), Cons(h2, t2)) => Some(f(Some(h()), Some(h2())) -> (t(), t2()))
+      case (Cons(h, t), Empty) => Some(f(Some(h()), Option.empty[B]) -> (t(), empty[B]))
+      case (Empty, Cons(h2, t2)) => Some(f(Option.empty[A], h2()) -> (empty[A], t2()))
+      case _ => None
+    }
+
+  /**
+    * EXERCISE 13
+    */
+
+  def startsWith[A](s: Stream[A], s2: Stream[A]): Boolean = ???
+
+
 
 }
 
@@ -156,4 +186,13 @@ object Stream {
     if (as.isEmpty) empty
     else cons(as.head, apply(as.tail: _*))
 
+
+  /**
+    * EXERCISE 10
+    */
+  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] =
+    f(z) match {
+      case Some((h, t)) => cons(h, unfold(t)(f)) // it applies the unfold function to the tail of the
+      case None => empty
+    }
 }
