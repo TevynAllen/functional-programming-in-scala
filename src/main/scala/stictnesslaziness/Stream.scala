@@ -101,7 +101,7 @@ trait Stream[+A] {
     */
   def fibs: Stream[Int] = {
     def go(f1: Int, f2: Int): Stream[Int] = {
-      cons(f1, go(f2, f1+f2) )
+      cons(f1, go(f2, f1+f2))
     }
     go(0, 1)
   }
@@ -163,6 +163,15 @@ trait Stream[+A] {
 
   def startsWith[A](s: Stream[A], s2: Stream[A]): Boolean = ???
 
+  /**
+    * EXERCISE 14
+    */
+
+  def tails: Stream[Stream[A]] = ???
+    unfold(this){
+      case Empty => None
+      case s => Some((s, s ))
+    }
 
 
 }
