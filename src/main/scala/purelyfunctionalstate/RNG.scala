@@ -47,5 +47,60 @@ object RNG {
   }
 
   //EXERCISE 4
-  def ints(count: Int)(rng: RNG): (List[Int], RNG) = ???
+  def ints(count: Int)(rng: RNG): (List[Int], RNG) = {
+    if (count == 0) (List(), rng)
+    else {
+      val (int1, rng1) = rng.nextInt
+      val (int2, rng2) = ints(count - 1)(rng1)
+
+      (int1 :: int2, rng2)
+    }
+  }
+
+  type Rand[+A] = RNG => (A, RNG)
+
+  val int: Rand[Int] = _.nextInt
+
+  /**
+    * RNG-transition is the unit action, which passes the RNG state through without using it,
+    * always returning a constant value rather than a random value.
+    */
+  def unit[A](a: A): Rand[A] = rng => (a, rng)
+
+  //map, for transforming the output of a state action without modifying the state itself.
+
+  def map[A,B](s: Rand[A])(f: A => B): Rand[B] =
+    rng => {
+      val (a, rng2) = s(rng)
+      (f(a), rng2)
+    }
+
+  // creating a map and unit functions has made RNG a functor type
+
+  //EXERCISE 5 - Use map to generate an Int between 0 and n
+
+  def positiveMax(n: Int): Rand[Int] = map(ints(n))(i => i.max)
+
+  // EXERCISE 6
+
+  def doubleWithMap: Rand[Double] = map(positiveInt)(_ / (Int.MaxValue.toDouble + 1))
+
+  //EXERCISE 7
+
+  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    rng => {
+      val (a, rng2) = ra(rng)
+      val (b, rng3) = rb(rng2)
+      (f(a, b), rng3)
+    }
+
+  def intDoubleWithMap[A, B](ra: Rand[A], rb: Rand[B]): Rand[(Int, Double)] = ???
+
+  def doubleIntWithMap: Rand[(Double, Int)] = ???
+
+  //EXERCISE 8
+  def sequence[A](fs: List[Rand[A]]): Rand[List[A]] =
+    fs.foldRight(unit(List[A]()))((rand, ba) => map2(rand, ba)((r, b) => r :: b))
+
+
 }
