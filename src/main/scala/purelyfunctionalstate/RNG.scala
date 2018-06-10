@@ -102,5 +102,18 @@ object RNG {
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] =
     fs.foldRight(unit(List[A]()))((rand, ba) => map2(rand, ba)((r, b) => r :: b))
 
+  //EXERCISE 9
+  def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] =
+    rng => {
+      val (a, rng2) = f(rng)
+      g(a)(rng2)
+    }
+
+  //??? need to do testing
+  def positiveIntWithFlatMap: Rand[Int] = flatMap(int){ i =>
+    if(i < 0) unit(i.abs) else unit(i)
+  }
+
+  //EXERCISE 10
 
 }
