@@ -115,5 +115,55 @@ object RNG {
   }
 
   //EXERCISE 10
+  def mapUsingFlatMap[A,B](s: Rand[A])(f: A => B): Rand[B] =
+    flatMap(s)(a => unit(f(a)))
 
+  def map2UsingFlatMap[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    flatMap(ra)(a => flatMap(rb)(b => unit(f(a, b))))
+}
+
+//  type State[S,+A] = S => (A, S)
+case class State[S,+A](run: S => (A,S)) {
+  //EXERCISE 11
+  def map[B](f: A => B): State[S, B] = State(s => {
+      val (a, s1) = run(s)
+      (f(a), s1)
+    })
+
+  def map2[B,C](sb: State[S, B])(f: (A, B) => C): State[S, C] =
+    flatMap(a => sb.map(b => f(a, b)))
+
+  def flatMap[B](f: A => State[S,B]): State[S,B] = State(s => {
+    val (a, s1) = run(s)
+    f(a).run(s1)
+  })
+}
+
+object State {
+  type Rand[A] = State[RNG, A]
+
+  def unit[S, A](a: A): State[S, A] = State(s => (a, s))
+
+  def sequence[S,A](fs: List[State[S, A]]): State[S, List[A]] =
+    fs.foldRight(unit[S, List[A]](List[A]()))((st, b) => st.map2(b)(_ :: _))
+
+  def modify[S](f: S => S): State[S, Unit] = for {
+    s <- get
+    _ <- set(f(s))
+  } yield ()
+
+  def get[S]: State[S, S] = State(s => (s, s))
+
+  def set[S](newState: S): State[S, Unit] = State(_ => ((), newState))
+}
+
+sealed trait Input
+case object Coin extends Input
+case object Turn extends Input
+
+case class Machine(locked: Boolean, candies: Int, coins: Int)
+
+object Dispenser {
+
+  def simulateMachine(inputs: List[Input]): State[Machine, Int] = ???
 }
