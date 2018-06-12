@@ -164,6 +164,22 @@ case object Turn extends Input
 case class Machine(locked: Boolean, candies: Int, coins: Int)
 
 object Dispenser {
+import State._
 
-  def simulateMachine(inputs: List[Input]): State[Machine, Int] = ???
+  def simulateMachine(inputs: List[Input]): State[Machine, Int] = for {
+    _ <- sequence(inputs.map(modify[Machine] _.compose(updateMachine())))
+    s <- get
+  } yield s.candies
+
+  private def updateMachine() = (input: Input) => (machineState: Machine) => (input, machineState) match {
+    //Inserting a coin into a locked machine will cause it to unlock if there is any candy left.
+    case (Coin, Machine(true, candies, coins)) => Machine(false, candies, coins + 1)
+    //Turning the knob on an unlocked machine will cause it to dispense candy and become locked
+    case (Turn, Machine(false, candies, coins)) => Machine(true, candies - 1, coins)
+    //Turning the knob on a locked machine or inserting a coin into an unlocked machine does nothing.
+    case (Turn, Machine(true, _, _)) => machineState
+    case (Coin, Machine(true, _, _)) => machineState
+    case (_, Machine(_, 0, _)) => machineState
+
+  }
 }
