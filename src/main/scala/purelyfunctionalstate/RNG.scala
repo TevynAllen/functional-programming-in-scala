@@ -167,7 +167,7 @@ object Dispenser {
 import State._
 
   def simulateMachine(inputs: List[Input]): State[Machine, Int] = for {
-    _ <- sequence(inputs.map(modify[Machine] _.compose(updateMachine())))
+    _ <- sequence(inputs.map(modify[Machine] _ compose updateMachine())) // compose will take the result of the second function and pass it as an input parameter to the first function
     s <- get
   } yield s.candies
 
