@@ -1,6 +1,6 @@
 package functionalparallelism
 
-import java.util.concurrent.{Callable, TimeUnit}
+import java.util.concurrent.{Future, ExecutorService, TimeUnit}
 
 sealed trait Par[A] {
 }
@@ -11,7 +11,7 @@ object Par {
 
   //for taking an unevaluated A and returning a
   // parallel computation that yields an A
-  def unit[A](a: => A): Par[A] = ???
+  def unit[A](a: => A): Par[A] = es => Fut(a)
 
   def async[A](a: => A): Par[A] = fork(unit(a))
 
@@ -22,21 +22,23 @@ object Par {
 
   def map2[A, B, C](p1: Par[A], p2: Par[B])(f: (A, B) => C): Par[C] = {
     (es: ExecutorService) =>
-      val a = p1(es)
-      val b = p2(es)
+      val a = p1(es).get()
+      val b = p2(es).get()
 
-    ??? //  fork(unit(f(a.get, b.get)))
+    Fut(f(a, b))
   }
 
-  /*def sum(as: IndexedSeq[Int]): Int =
-    if(as.size <= 1) as.headOption getOrElse 0
-    else {
-      val (l, r) = as.splitAt(as.length/2)
-      val sumL: Par[Int] = Par.unit(sum(l))
-      val sumR: Par[Int] = Par.unit(sum(r))
+  case class Fut[A](a: A) extends Future[A] {
+    override def cancel(mayInterruptIfRunning: Boolean): Boolean = ???
 
-      Par.get(sumL) + Par.get(sumR)
-    }*/
+    override def isCancelled: Boolean = ???
+
+    override def isDone: Boolean = ???
+
+    override def get(): A = ???
+
+    override def get(timeout: Long, unit: TimeUnit): A = ???
+  }
 
   def sum(as: IndexedSeq[Int]): Par[Int] =
     if(as.size <= 1) Par.unit(as.headOption getOrElse 0)
@@ -45,18 +47,4 @@ object Par {
       map2(sum(l), sum(r))(_ + _)
     }
 
-
-
-}
-
-class ExecutorService {
-  def submit[A](a: Callable[A]): Future[A] = ???
-}
-
-trait Future[A] {
-  def get: A
-  def get(timeout: Long, unit: TimeUnit): A
-  def cancel(evenIfRunning: Boolean): Boolean
-  def isDone: Boolean
-  def isCancelled: Boolean
 }
