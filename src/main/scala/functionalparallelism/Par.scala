@@ -98,4 +98,27 @@ object Par {
       map2(sum(l), sum(r))(_ + _)
     }
 
+  def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean =
+    p(e).get == p2(e).get
+
+  //identity fucntion
+  def id[A](a: A): A = a
+
+  val x = 1
+  val y = unit(x)
+  map(unit(x))(id) == unit(id(x)) // subsitiute identity function for f
+  map(unit(x))(id) == unit(x) // simplify
+  map(y)(id) == y // subsitute y for unit(x) on both sides
+
+  /**
+    * To get some insight into what this new law is saying,
+    * let's think about what map cannot do. It cannot, say,
+    * throw an exception and crash the computation before applying the function to the result
+    * - Can you see why this violates the law?
+    */
+
+
+
+
+
 }
