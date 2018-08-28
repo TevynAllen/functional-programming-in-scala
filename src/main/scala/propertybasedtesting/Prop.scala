@@ -1,0 +1,5 @@
+package propertybasedtesting
+
+class Prop {
+
+}
