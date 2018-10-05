@@ -61,6 +61,9 @@ object RNG {
 
   val int: Rand[Int] = _.nextInt
 
+  def boolean(rng: RNG): (Boolean, RNG) =
+    rng.nextInt match { case (i,rng2) => (i%2==0,rng2) }
+
   /**
     * RNG-transition is the unit action, which passes the RNG state through without using it,
     * always returning a constant value rather than a random value.
