@@ -28,7 +28,13 @@ case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
   def choose(i: Double, j: Double): Gen[Double] =
     Gen(State(RNG.double).map(d => i + d % j), Some(Stream.apply(i)))
 
-}
+  def map[A, B](f: A => B): Gen[B] =
+    Gen(sample.map(a => f(a)), None)
+
+  def map2[A, B](f: A => B): Gen[B] =
+    Gen(???)
+
+  }
 
 object Prop {
   type FailedCase = String
