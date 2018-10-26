@@ -106,6 +106,14 @@ case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
     Gen(State(RNG.double).flatMap(d => if (d < g1Prob) g1._1.sample else g2._1.sample), None)
   }
 
+  //EXERCISE 13
+  def unsized: SGen[A] = SGen(_ => this)
+
+  //EXERCISE 15
+  def listOf[A](g: Gen[A]): SGen[List[A]] = SGen {
+    i => listOfN(i, g)
+  }
+
 }
 
 object Gen {
@@ -121,8 +129,15 @@ object Gen {
   }
 }
 
+case class SGen[+A](forSize: Int => Gen[A]) {
+  def apply(n: Int): Gen[A] = forSize(n)
+
+  def map[A, B](f: A => B): SGen[B] = SGen {
+    forSize(_).map(f)
+  }
+}
+
 trait Status
-
+case object Exhausted extends Status
 case object Proven extends Status
-
 case object Unfalsified extends Status
