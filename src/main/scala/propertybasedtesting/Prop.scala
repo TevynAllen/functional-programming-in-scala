@@ -73,7 +73,7 @@ case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
   def buildMsg[A](s: A, e: Exception): String =
     "test case: " + s + "\n" +
       "generated an exception: " + e.getMessage + "\n" +
-      "stack trace:\n" + e.getStackTrace.mkString("\n"
+      "stack trace:\n" + e.getStackTrace.mkString("\n")
 
   def uniform: Gen[Double] =
     Gen(State(RNG.double), Some(Stream.apply()))
