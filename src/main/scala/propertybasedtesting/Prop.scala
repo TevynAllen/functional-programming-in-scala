@@ -3,6 +3,7 @@ package propertybasedtesting
 import propertybasedtesting.Prop.{FailedCase, Result, SuccessCount, TestCases}
 import purelyfunctionalstate.{RNG, State}
 
+//page 134
 case class Prop(run: (TestCases, RNG) => Result) {
   def check: Either[FailedCase, SuccessCount] = ???
 
@@ -45,7 +46,7 @@ case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] =
     Gen(State.sequence(List.fill(n)(g.sample)), None)
 
-  def forAll[A](a: Gen[A])(f: A => Boolean): Prop = Prop { (n, rng) => {
+  /*def forAll[A](a: Gen[A])(f: A => Boolean): Prop = Prop { (n, rng) => {
     def go(i: Int, j: Int, s: Stream[Option[A]], onEnd: Int => Result):
     Result =
       if (i == j) Right((Unfalsified, i))
@@ -68,6 +69,18 @@ case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
       case s => s
     }
   }
+  }*/
+
+  def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
+    Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+
+
+  def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
+    (n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+      case (a, i) => try {
+        if (f(a)) Passed else Falsified(a.toString, i)
+      } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
+    }.find(_.isFalsified).getOrElse(Passed)
   }
 
   def buildMsg[A](s: A, e: Exception): String =
@@ -114,6 +127,10 @@ case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
     i => listOfN(i, g)
   }
 
+  //EXERCISE 17
+  def forAll[A](g: SGen[A])(f: A => Boolean): Prop =
+    forAll(g(_))(f)
+
 }
 
 object Gen {
@@ -128,6 +145,10 @@ object Gen {
     ???
   }
 }
+
+trait SGen[+A]
+case class Sized[+A](forSize: Int => Gen[A]) extends SGen[A]
+case class Unsized[+A](get: Gen[A]) extends SGen[A]
 
 case class SGen[+A](forSize: Int => Gen[A]) {
   def apply(n: Int): Gen[A] = forSize(n)
