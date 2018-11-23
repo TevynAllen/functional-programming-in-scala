@@ -30,6 +30,16 @@ object Prop {
 
   def run: Either[FailedCase, (Status, SuccessCount)] = ???
 
+  def run(p: Prop, maxSize: Int = 100, testCases: Int = 100,
+          rng: RNG = RNG.simple(System.currentTimeMillis)): Unit = {
+    p.run(maxSize, testCases, rng) match {
+      case Left(msg) => println("! test failed:\n" + msg)
+      case Right((Unfalsified, n)) => println("+ property unfalsified, ran " + n + " tests")
+      case Right((Proven, n)) => println("+ property proven, ran " + n + " tests")
+      case Right((Exhausted, n)) => println("+ property unfalsified up to max size, ran " + n + " tests")
+    }
+  }
+
 }
 
 case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
@@ -76,11 +86,14 @@ case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
 
 
   def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
-    (n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
-      case (a, i) => try {
-        if (f(a)) Passed else Falsified(a.toString, i)
-      } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
-    }.find(_.isFalsified).getOrElse(Passed)
+    (n, rng) =>
+      randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+        case (a, i) => try {
+          if (f(a)) Passed else Falsified(a.toString, i)
+        } catch {
+          case e: Exception => Falsified(buildMsg(a, e), i)
+        }
+      }.find(_.isFalsified).getOrElse(Passed)
   }
 
   def buildMsg[A](s: A, e: Exception): String =
@@ -129,7 +142,23 @@ case class Gen[+A](sample: State[RNG, A], exhaustive: Option[Stream[A]]) {
 
   //EXERCISE 17
   def forAll[A](g: SGen[A])(f: A => Boolean): Prop =
-    forAll(g(_))(f)
+    forAll(g)(f)
+
+  val smallInt: Gen[SuccessCount] = Gen.choose(-10, 10)
+  val maxProp: Prop = forAll(listOf(smallInt)) { l =>
+    val max = l.max
+    !l.exists(_ > max)
+  }
+
+  //EXERCISE 19
+  def listOf1[A](g: Gen[A]): SGen[List[A]] =
+    SGen(i => g.listOfN(i max 1))
+
+  //EXERCISE 20
+  val sortedProp = forAll(listOf(smallInt)) { l =>
+    val ls = l.sorted
+    l.isEmpty || !l.zip(l.tail).exists {case (a,b) => a > b}
+  }
 
 }
 
@@ -159,6 +188,9 @@ case class SGen[+A](forSize: Int => Gen[A]) {
 }
 
 trait Status
+
 case object Exhausted extends Status
+
 case object Proven extends Status
+
 case object Unfalsified extends Status
