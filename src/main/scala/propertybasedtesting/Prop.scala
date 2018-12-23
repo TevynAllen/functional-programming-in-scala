@@ -7,7 +7,6 @@ import functionalparallelism.Par.Par
 import propertybasedtesting.Prop.{FailedCase, Result, SuccessCount, TestCases}
 import purelyfunctionalstate.{RNG, State}
 
-//page 134
 case class Prop(run: (TestCases, RNG) => Result) {
   def check: Either[FailedCase, SuccessCount] = ???
 
