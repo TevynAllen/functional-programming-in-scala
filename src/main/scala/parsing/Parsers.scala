@@ -1,6 +1,6 @@
 package parsing
 
-import propertybasedtesting.{Gen, Prop}
+import propertybasedtesting.{Gen, Prop, SGen}
 
 import scala.util.matching.Regex
 
@@ -48,7 +48,8 @@ trait Parsers[ParseError, Parser[+ _]] { // a type constructor type argument
   def many[A](p: Parser[A]): Parser[List[A]] = map2(p, many(p))(_ :: _) or succeed(List())
 
   // Apply the function f to the result of p, if successful
-  def map[A, B](a: Parser[A])(f: A => B): Parser[B] = ???
+  def map[A, B](a: Parser[A])(f: A => B): Parser[B] =
+    flatMap(a)(p => succeed(f(p)))
 
   object Laws {
     def equal[A](p1: Parser[A], p2: Parser[A])(in: Gen[String]): Prop =
@@ -66,11 +67,14 @@ trait Parsers[ParseError, Parser[+ _]] { // a type constructor type argument
 
   //Sequence two parsers, running p1, then p2 and return the pair of their results if both succeed
   //running one parser followed by another if the first parser is successful
-  def product[A, B](p: Parser[A], p2: => Parser[B]): Parser[(A,B)] = ???
-
+  def product[A, B](p: Parser[A], p2: => Parser[B]): Parser[(A,B)] =
+    flatMap(p)(a => map(p2)(b => (a, b)))
 
   def map2[A, B, C](p: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] =
     map(product(p, p2))(f.tupled)
+
+  def map2Flat[A, B, C](p: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] =
+    flatMap(p)(a => map(p2)(b => f(a, b)))
 
   def flatMap[A, B](p: Parser[A])(f: A => Parser[B]): Parser[B]
 
@@ -79,5 +83,20 @@ trait Parsers[ParseError, Parser[+ _]] { // a type constructor type argument
   }
 
   implicit def regex(r: Regex): Parser[String]
+
+  def label[A](msg: String)(p: Parser[A]): Parser[A]
+
+  // the parse error needs to tell us where the problem occurred
+  case class Location(input: String, offset: Int = 0) {
+    lazy val line: Int = input.slice(0, offset + 1).count(_ == '\n') + 1
+    lazy val col: Int = input.slice(0, offset + 1).reverse.indexOf('\n')
+  }
+
+  def errorLocation(e: ParseError): Location
+  def errorString(e: ParseError): String
+
+  def scope[A](msg: String)(p: Parser[A]): Parser[A]
+
+  def errorStack(e: ParseError): List[(Location, String)])
 
 }
