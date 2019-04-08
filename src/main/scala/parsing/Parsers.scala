@@ -5,7 +5,8 @@ import propertybasedtesting.{Gen, Prop, SGen}
 import scala.util.matching.Regex
 
 //[_] scala syntax for a type parameter that is itself a type constructor
-trait Parsers[ParseError, Parser[+ _]] { // a type constructor type argument
+trait Parsers[Parser[+ _]] { // a type constructor type argument
+  self => // so inner classes may call methods of the trait
 
   def run[A](p: Parser[A])(input: String): Either[ParseError, A]
 
@@ -33,6 +34,7 @@ trait Parsers[ParseError, Parser[+ _]] { // a type constructor type argument
     def or[B >: A](p2: => Parser[B]): Parser[B] = self.or(p, p2)
     def **[A1 >: A, B >: A](p2: => Parser[B]): Parser[(A1, B)] = self.product(p, p2)
     def product[A1 >: A, B >: A](p2: => Parser[B]): Parser[(A1, B)] = self.product(p, p2)
+    def map[B](f: A => B): Parser[B] = self.map(p)(f)
   }
 
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] =
@@ -97,6 +99,10 @@ trait Parsers[ParseError, Parser[+ _]] { // a type constructor type argument
 
   def scope[A](msg: String)(p: Parser[A]): Parser[A]
 
-  def errorStack(e: ParseError): List[(Location, String)])
+  def errorStack(e: ParseError): List[(Location, String)]
 
+  case class ParseError(stack: List[(Location, String)] = List(), otherFailures: List[ParseError] = List())
+
+  //delays committing to a parse
+  def attempt[A](p: Parser[A]): Parser[A]
 }
