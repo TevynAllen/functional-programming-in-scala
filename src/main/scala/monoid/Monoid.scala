@@ -1,6 +1,6 @@
 package monoid
 
-import propertybasedtesting.{Gen, Prop}
+import propertybasedtesting.Prop
 
 /**
   * A monoid is an algebra which consists of associativity and idenitity laws called the monoid laws
@@ -9,11 +9,18 @@ import propertybasedtesting.{Gen, Prop}
   * - A binary associative operation that takes two values of type A and combines them into one
   * - A value of type A that is an identity for that operation
   */
+
+
+/**
+  * a monoid is a type together with an associative binary operation (op)
+  * which has an identity element (zero).
+  */
+
 trait Monoid[A] {
   def op(a1: A, a2: A): A
   def zero: A
-  def foldRight(z: A)(f: (A, A) => A): A
-  def foldLeft(z: A)(f: (A, A) => A): A
+//  def foldRight(z: A)(f: (A, A) => A): A
+//  def foldLeft(z: A)(f: (A, A) => A): A
 
   //string monoid
   val stringMonoid: Monoid[String] = new Monoid[String] {
@@ -66,7 +73,28 @@ trait Monoid[A] {
 
   def monoidLaws[A](m: Monoid[A]): Prop = ???
 
-  ///EXERCISE 5
-  def wordsMonoid(s: String): Monoid[String] = ???
+  ///EXERCISE 5 - Write a monoid instance for String that inserts spaces between words unless there already is one, and trims spaces off the ends of the result
+  def wordsMonoid(s: String): Monoid[String] = new Monoid[String] {
+    def op(a1: String, a2: String): String =
+      if(a1 == zero) a2
+      else if(a2 == zero) a1
+      else a1.trim + " " + a2.trim
 
+    def zero: String = " "
+  }
+
+  //EXERCISE 6 - Implement concatenate, a function that folds a list with a monoid
+  def concatenate[A](as: List[A], m: Monoid[A]): A =
+    as.foldLeft(m.zero)(m.op)
+
+  //EXERCISE 7 - map over the list to turn it into a type that has a monoid instance
+  def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B =
+    as.foldLeft(m.zero)((b, a) => m.op(b, f(a)))
+
+  //EXERCISE 8 - write foldLeft and foldRight using foldMap
+
+  def foldLeftMap[A, B](as: List[A])(z: B)(f: (B, A) => B): B = ???
+
+  def foldRightMap[A, B](as: List[A])(z: B)(f: (A, B) => B): B =
+    foldMap(as, EndoMonoid[B])(a => b => f(a, b))(z)
 }
