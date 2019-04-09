@@ -10,7 +10,7 @@ trait Parsers[Parser[+ _]] { // a type constructor type argument
 
   def run[A](p: Parser[A])(input: String): Either[ParseError, A]
 
-  def char(c: Char): Parser[Char] = string(c.toString) map (_.chatAt(0))
+  def char(c: Char): Parser[Char] = string(c.toString) map (_.charAt(0))
 
   //Always succeed with the value a
   def succeed[A](a: A): Parser[A] = string("") map (_ => a)
@@ -25,7 +25,7 @@ trait Parsers[Parser[+ _]] { // a type constructor type argument
   //choosing between two parsers, regardless of their result type
   def or[A](s1: Parser[A], s2: => Parser[A]): Parser[A]
 
-  implicit def string(s: String): Parser[String]
+//  implicit def string(s: String): Parser[String]
   implicit def operators[A](p: Parser[A]) = ParserOps[A](p)
   implicit def asStringParser[A](a: A)(implicit f: A => Parser[String]): ParserOps[String] = ParserOps(f(a))
 
@@ -35,6 +35,8 @@ trait Parsers[Parser[+ _]] { // a type constructor type argument
     def **[A1 >: A, B >: A](p2: => Parser[B]): Parser[(A1, B)] = self.product(p, p2)
     def product[A1 >: A, B >: A](p2: => Parser[B]): Parser[(A1, B)] = self.product(p, p2)
     def map[B](f: A => B): Parser[B] = self.map(p)(f)
+    def many[A]: Parser[List[A]] = self.many(p)
+    def slice[A]: Parser[String] = self.slice(p)
   }
 
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] =

@@ -1,0 +1,5 @@
+package monoid
+
+class Monoid {
+
+}
