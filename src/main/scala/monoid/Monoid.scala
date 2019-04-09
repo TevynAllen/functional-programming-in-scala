@@ -1,5 +1,7 @@
 package monoid
 
+import propertybasedtesting.{Gen, Prop}
+
 /**
   * A monoid is an algebra which consists of associativity and idenitity laws called the monoid laws
   * A monoid consists of
@@ -10,12 +12,18 @@ package monoid
 trait Monoid[A] {
   def op(a1: A, a2: A): A
   def zero: A
+  def foldRight(z: A)(f: (A, A) => A): A
+  def foldLeft(z: A)(f: (A, A) => A): A
 
   //string monoid
   val stringMonoid: Monoid[String] = new Monoid[String] {
     def op(a1: String, a2: String): String = a1 + a2
     def zero = ""
   }
+
+  val words = List("Hic", "Est", "Index")
+  val s = words.foldRight(stringMonoid.zero)(stringMonoid.op)
+  val t = words.foldLeft(stringMonoid.zero)(stringMonoid.op)
 
   //list concatenation also forms a monoid
   def listMonoid[A] = new Monoid[List[A]] {
@@ -44,5 +52,21 @@ trait Monoid[A] {
     def zero: Boolean = true
   }
 
+  // EXERCISE 2: Give a Monoid instance for combining Options
+  def optionMonoid[A]: Monoid[Option[A]] = new Monoid[Option[A]] {
+    def op(a1: Option[A], a2: Option[A]): Option[A] = a1 orElse a2
+    def zero: Option[A] = None
+  }
+
+  //EXERCISE 3: A function having the same argument and return type is called an endofunction
+  def EndoMonoid[A]: Monoid[A => A] = new Monoid[A => A] {
+    def op(a1: A => A, a2: A => A): A => A = a1 andThen a2
+    def zero: A => A = (a: A) => a
+  }
+
+  def monoidLaws[A](m: Monoid[A]): Prop = ???
+
+  ///EXERCISE 5
+  def wordsMonoid(s: String): Monoid[String] = ???
 
 }
