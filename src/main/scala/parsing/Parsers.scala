@@ -1,6 +1,6 @@
 package parsing
 
-import propertybasedtesting.{Gen, Prop, SGen}
+import propertybasedtesting.{Gen, Prop}
 
 import scala.util.matching.Regex
 

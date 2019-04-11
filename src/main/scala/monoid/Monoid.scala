@@ -97,4 +97,24 @@ trait Monoid[A] {
 
   def foldRightMap[A, B](as: List[A])(z: B)(f: (A, B) => B): B =
     foldMap(as, EndoMonoid[B])(a => b => f(a, b))(z)
+
+  sealed trait WC
+  case class Stub(chars: String) extends WC // we have not seen any complete words yet
+  case class Part(lStub: String, words: Int, rStub: String) extends WC //
+
+  //EXERCISE 9
+  val wcMonoid: Monoid[WC] = new Monoid[WC] {
+    def op(a1: WC, a2: WC): WC =
+      (a1, a2) match {
+        case (Stub(a), Stub(aa)) => Stub(a + aa)
+        case (Stub(a), Part(b, i, c)) => Part(a + b, i, c)
+        case (Part(b, i, c), Stub(a)) => Part(b, i, c + a)
+        case (Part(a, i, c), Part(aa, ii, cc)) =>  Part(a, i + (if((c + aa).isEmpty) 0 else 1) + ii, cc)
+    }
+
+    def zero: WC = Stub("")
+  }
+
+  //EXERCISE 10
+
 }
