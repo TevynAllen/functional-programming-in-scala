@@ -20,6 +20,7 @@ import propertybasedtesting.Prop
 
 trait Monoid[A] {
   def op(a1: A, a2: A): A
+
   def zero: A
 }
 
@@ -150,6 +151,17 @@ object Monoid {
     def op(a1: (A, B), a2: (A, B)): (A, B) = (a.op(a1._1, a2._1), b.op(a2._2, a1._2))
 
     def zero: (A, B) = (a.zero, b.zero)
+  }
+
+  //EXERCISE 18: Do the same with Either. This is called a monoid coproduct
+  def coproductMonoid[A, B](a: Monoid[A], b: Monoid[B]): Monoid[Either[A, B]] = new Monoid[Either[A, B]] {
+    def op(a1: Either[A, B], a2: Either[A, B]): Either[A, B] =
+      Either(
+        a.op(a1.left.get, a2.left.get),
+        b.op(a1.right.get, a2.right.get)
+      )
+
+    def zero: Either[A, B] = Either(a.zero, b.zero)
   }
 }
 
