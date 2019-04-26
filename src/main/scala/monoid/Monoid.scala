@@ -163,6 +163,37 @@ object Monoid {
 
     def zero: Either[A, B] = Either(a.zero, b.zero)
   }
+
+  def mapMergeMonoid[K,V](V: Monoid[V]): Monoid[Map[K, V]] =
+    new Monoid[Map[K, V]] {
+      def op(a1: Map[K, V], a2: Map[K, V]): Map[K, V] =
+        a1.map {
+          case (k, v) => (k, V.op(v, a2.get(k) getOrElse V.zero))
+        }
+
+      def zero: Map[K, V] = Map()
+    }
+
+  val M: Monoid[Map[String, Map[String, Int]]] = mapMergeMonoid(mapMergeMonoid(intAddition))
+
+  val m1: Map[String, Map[String, Int]] = Map("o1" -> Map("i1" -> 1, "i2" -> 2))
+
+  val m2 = Map("o1" -> Map("i2" -> 3))
+
+  val m3: Map[String, Map[String, Int]] = M.op(m1, m2)
+
+  //EXERCISE 19 - Write a monoid instance for functions whose results are monoids
+  def functionMonoid[A, B](B: Monoid[B]): Monoid[A => B] = new Monoid[A => B] {
+    override def op(a1: A => B, a2: A => B): A => B = (a: A) => B.op(a1(a), a2(a))
+
+    override def zero: A => B = (a: A) => B.zero
+  }
+
+  //EXERCISE 20: Use monoids to compute a frequency map of words in an IndexedSeq of Strings
+  def frequencyMap(strings: IndexedSeq[String]): Map[String, Int] =
+    foldMapV(strings, mapMergeMonoid[String, Int](intAddition))(a => Map(a -> 1))
+
+  val m = productMonoid(intAddition, intAddition)
 }
 
 trait Foldable[F[_]] { // Foldable is a higher-kinded type,
