@@ -1,7 +1,4 @@
-package main.scala.functionaldatastructures
-
-import main.scala.functionaldatastructures.List.flatMap
-
+package functionaldatastructures
 
 /**
   * adding a sealed in front of the trait means that all
