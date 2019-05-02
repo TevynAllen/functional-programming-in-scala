@@ -4,11 +4,7 @@ import functionalparallelism.Par
 import functionalparallelism.Par.Par
 import parsing.Parsers
 import propertybasedtesting.Gen
-import handlingerrors._
 import stictnesslaziness.Stream
-import functionaldatastructures.List
-import functionaldatastructures.List._
-import purelyfunctionalstate.State
 
 trait Functor[F[_]] {
   def map[A,B](fa: F[A])(f: A => B): F[B]
@@ -26,9 +22,26 @@ trait Monad[M[_]] extends Functor[M] {
 
   def map2[A,B,C](ma: M[A], mb: M[B])(f: (A, B) => C): M[C] =
     flatMap(ma)(a => map(mb)(b => f(a, b)))
+
+  def sequence[A](lma: List[M[A]]): M[List[A]] =
+    lma.foldLeft(unit(List[A]()))((m, l) =>  map2(l, m)(_ :: _))
+
+  def traverse[A,B](la: List[A])(f: A => M[B]): M[List[B]] =
+    la.foldLeft(unit(List[B]()))((m, a) => map2(f(a), m)((a, l) =>  a :: l))
+
+  def replicateM[A](n: Int, ma: M[A]): M[List[A]] =
+    sequence(List.fill(n)(ma))
+
+  def factor[A,B](ma: M[A], mb: M[B]): M[(A, B)] = map2(ma, mb)((_, _))
+
+  def cofactor[A,B](e: Either[M[A], M[B]]): M[Either[A, B]] = ???
 }
 
 object Monad {
+
+  import functionaldatastructures._
+  import handlingerrors._
+
   val genMonad: Monad[Gen] = new Monad[Gen] {
     def unit[A](a: => A): Gen[A] = Gen.unit(a)
 
