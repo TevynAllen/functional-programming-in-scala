@@ -35,6 +35,9 @@ trait Monad[M[_]] extends Functor[M] {
   def factor[A,B](ma: M[A], mb: M[B]): M[(A, B)] = map2(ma, mb)((_, _))
 
   def cofactor[A,B](e: Either[M[A], M[B]]): M[Either[A, B]] = ???
+
+  def compose[A,B,C](f: A => M[B], g: B => M[C]): A => M[C] =
+    a => g(f(a))
 }
 
 object Monad {
