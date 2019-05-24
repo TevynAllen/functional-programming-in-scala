@@ -4,6 +4,7 @@ import functionalparallelism.Par
 import functionalparallelism.Par.Par
 import parsing.Parsers
 import propertybasedtesting.Gen
+import purelyfunctionalstate.State
 import stictnesslaziness.Stream
 
 trait Functor[F[_]] {
@@ -15,7 +16,7 @@ trait Functor[F[_]] {
 
 trait Monad[M[_]] extends Functor[M] {
   def unit[A](a: => A): M[A]
-  def flatMap[A,B](ma: M[A])(f: A => M[B]): M[B]
+  def flatMap[A,B](ma: M[A])(f: A => M[B]): M[B] //obeys an associative law - x.flatMap(f).flatMap(g) == x.flatMap(a => f(a).flatMap(g))
 
   def map[A,B](ma: M[A])(f: A => B): M[B] =
     flatMap(ma)(a => unit(f(a)))
@@ -38,6 +39,18 @@ trait Monad[M[_]] extends Functor[M] {
 
   def compose[A,B,C](f: A => M[B], g: B => M[C]): A => M[C] =
     a => g(f(a))
+
+  def join[A](mma: M[M[A]]): M[A] =
+    flatMap(mma)(a => a)
+
+  /**
+    * left identity - flatMap(unit(x))(f) == f(x)
+    * right identity - flatMap(x)(unit) == x
+    */
+
+  def flatMap_[A,B](ma: M[A])(f: A => M[B]): M[B] =
+    join(unit(ma))(f)
+
 }
 
 object Monad {
@@ -87,6 +100,27 @@ object Monad {
     override def flatMap[A, B](ma: List[A])(f: A => List[B]): List[B] =
       List.flatMap(ma)(f)
   }
-
 }
 
+case class Id[A](value: A) {
+  def unit[A](a: => A): Id[A] = Id(a)
+  def flatMap[B](f: A => Id[B]): Id[B] = f(value)
+}
+
+object StateMonad {
+  def stateMonad[S] = new Monad[({type lambda[x] = State[S,x]})#lambda] {
+    override def unit[A](a: => A): State[S, A] = State(s => (a, s))
+
+    override def flatMap[A, B](ma: State[S, A])(f: A => State[S, B]): State[S, B] = ma.flatMap(f)
+  }
+}
+
+case class Reader[R, A](run: R => A)
+
+object Reader {
+  def readerMonad[R] = new Monad[({type f[x] = Reader[R,x]})#f] {
+    override def unit[A](a: => A): Reader[R, A] = Reader(_ => a)
+
+    override def flatMap[A, B](ma: Reader[R, A])(f: A => Reader[R, B]): Reader[R, B] = Reader(r => f(ma.run(r)).run(r))
+  }
+}
