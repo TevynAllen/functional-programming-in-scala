@@ -108,7 +108,7 @@ case class Id[A](value: A) {
 }
 
 object StateMonad {
-  def stateMonad[S] = new Monad[({type lambda[x] = State[S,x]})#lambda] {
+  def stateMonad[S]: Monad[State[S, _]] = new Monad[({type lambda[x] = State[S,x]})#lambda] {
     override def unit[A](a: => A): State[S, A] = State(s => (a, s))
 
     override def flatMap[A, B](ma: State[S, A])(f: A => State[S, B]): State[S, B] = ma.flatMap(f)
@@ -118,7 +118,7 @@ object StateMonad {
 case class Reader[R, A](run: R => A)
 
 object Reader {
-  def readerMonad[R] = new Monad[({type f[x] = Reader[R,x]})#f] {
+  def readerMonad[R]: Monad[Reader[R, _]] = new Monad[({type f[x] = Reader[R,x]})#f] {
     override def unit[A](a: => A): Reader[R, A] = Reader(_ => a)
 
     override def flatMap[A, B](ma: Reader[R, A])(f: A => Reader[R, B]): Reader[R, B] = Reader(r => f(ma.run(r)).run(r))
