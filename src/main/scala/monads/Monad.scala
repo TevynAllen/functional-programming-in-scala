@@ -1,5 +1,6 @@
 package monads
 
+import applicative.Applicative
 import functionalparallelism.Par
 import functionalparallelism.Par.Par
 import parsing.Parsers
@@ -14,26 +15,37 @@ trait Functor[F[_]] {
     (map(fab)(_._1), map(fab)(_._2))
 }
 
-trait Monad[M[_]] extends Functor[M] {
+/**
+  * A monad is just an applicative functor with an additional combinator, join
+  */
+trait Monad[M[_]] extends Applicative[M] {
   def unit[A](a: => A): M[A]
   def flatMap[A,B](ma: M[A])(f: A => M[B]): M[B] //obeys an associative law - x.flatMap(f).flatMap(g) == x.flatMap(a => f(a).flatMap(g))
 
-  def map[A,B](ma: M[A])(f: A => B): M[B] =
+  def join[A](mma: M[M[A]]): M[A] = flatMap(mma)(ma => ma)
+
+  def compose[A,B,C](f: A => M[B], g: B => M[C]): A => M[C] =
+    a => flatMap(f(a))(g)
+
+  override def apply[A, B](fab: M[A => B])(fa: M[A]): M[B] =
+    flatMap(fab)(f => flatMap(fa)(a => f(a)))
+
+  override def map[A,B](ma: M[A])(f: A => B): M[B] =
     flatMap(ma)(a => unit(f(a)))
 
-  def map2[A,B,C](ma: M[A], mb: M[B])(f: (A, B) => C): M[C] =
+  override def map2[A,B,C](ma: M[A], mb: M[B])(f: (A, B) => C): M[C] =
     flatMap(ma)(a => map(mb)(b => f(a, b)))
 
-  def sequence[A](lma: List[M[A]]): M[List[A]] =
+  override def sequence[A](lma: List[M[A]]): M[List[A]] =
     lma.foldLeft(unit(List[A]()))((m, l) =>  map2(l, m)(_ :: _))
 
-  def traverse[A,B](la: List[A])(f: A => M[B]): M[List[B]] =
+  override def traverse[A,B](la: List[A])(f: A => M[B]): M[List[B]] =
     la.foldLeft(unit(List[B]()))((m, a) => map2(f(a), m)((a, l) =>  a :: l))
 
-  def replicateM[A](n: Int, ma: M[A]): M[List[A]] =
+  override def replicateM[A](n: Int, ma: M[A]): M[List[A]] =
     sequence(List.fill(n)(ma))
 
-  def factor[A,B](ma: M[A], mb: M[B]): M[(A, B)] = map2(ma, mb)((_, _))
+  override def factor[A,B](ma: M[A], mb: M[B]): M[(A, B)] = map2(ma, mb)((_, _))
 
   def cofactor[A,B](e: Either[M[A], M[B]]): M[Either[A, B]] = ???
 
