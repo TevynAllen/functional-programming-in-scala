@@ -119,6 +119,34 @@ case class Id[A](value: A) {
   def flatMap[B](f: A => Id[B]): Id[B] = f(value)
 }
 
+/**
+  * it would be really repetitive if we had to manually write a separate Monad instance for each specific state type.
+  * Unfortunately, Scala does not allow us to use underscore syntax to simply say State[Int, _]
+  * to create an anonymous type constructor like we create anonymous functions with the underscore syntax.
+  * But instead we can use something similar to lambda syntax at the type level.
+  * For example, we could have declared IntState directly inline like this:
+  */
+
+object IntStateMonad extends Monad[({type IntState[A] = State[Int, A]})#IntState] {
+  override def unit[A](a: => A): State[Int, A] = ???
+
+  override def flatMap[A, B](ma: State[Int, A])(f: A => State[Int, B]): State[Int, B] = ???
+}
+
+/**
+  * This syntax can be a little jarring when you first see it.
+  * But all we are doing is declaring an anonymous type within parentheses.
+  * This anonymous type has, as one of its members, the type alias IntState, which looks just like before.
+  * Outside the parentheses we are then accessing its IntState member with the # syntax.
+  * Just like we can use a "dot" (.) to access a member of an object at the value level,
+  * we can use the # symbol to access a type member
+  */
+
+/**
+  * A type constructor declared inline like this is often called a type lambda in Scala.
+  * We can use this trick to partially apply the State type constructor and declare a StateMonad trait.
+  * An instance of StateMonad[S] is then a monad instance for the given state type S.
+  */
 object StateMonad {
   def stateMonad[S]: Monad[State[S, _]] = new Monad[({type lambda[x] = State[S,x]})#lambda] {
     override def unit[A](a: => A): State[S, A] = State(s => (a, s))
