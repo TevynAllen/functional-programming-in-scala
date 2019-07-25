@@ -2,8 +2,9 @@ package applicative
 
 import java.util.Date
 
-import monads.{Functor, Monad}
+import monads.{Functor, Monad, StateMonad}
 import monoid.{Foldable, Monoid}
+import purelyfunctionalstate.State
 
 /**
   * When using Monads we lose some compositionality.
@@ -190,6 +191,18 @@ object Applicative {
     *
     */
 
+  type Const[A, B] = A
+
+  implicit def monoidApplicative[M](M: Monoid[M]) = new Applicative[({ type f[x] = Const[M, x]})#f] {
+    override def unit[A](a: A): Const[M, A] = M.zero
+
+    override def apply[A, B](m1: M)(m2: M): M = M.op(m1, m2)
+  }
+
+  /**
+    * applicative functors are sometimes called monoidal functors
+    *  - operations of a monoid map directly onto operations of an applicative
+    */
 }
 
 trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
@@ -221,6 +234,10 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
 
   override def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B =
     traverse[({type f[x] = Const[B, x]})#f, A, Nothing](as)(f)(monoidApplicative(mb))
+
+  def traverseS[S,A,B](fa: F[A])(f: A => State[S, B]): State[S, F[B]] =
+    traverse[({ type f[x] = State[S, x]})#f, A,B](fa)(f)(StateMonad.stateMonad)
+
 }
 
 case class Tree[+A](head: A, tail: List[Tree[A]])
