@@ -5,6 +5,7 @@ import java.util.Date
 import monads.{Functor, Monad, StateMonad}
 import monoid.{Foldable, Monoid}
 import purelyfunctionalstate.State
+import purelyfunctionalstate.State._
 
 /**
   * When using Monads we lose some compositionality.
@@ -235,8 +236,73 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
   override def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B =
     traverse[({type f[x] = Const[B, x]})#f, A, Nothing](as)(f)(monoidApplicative(mb))
 
+  /** EXERCISE 11 - Can you think of a Foldable that is not a functor?
+    *
+    * An example of a foldable that is not a functor is a Set
+    *
+    */
+
+  /**
+    * There's an unfortunate amount of type annotation necessary in order to partially apply State in the proper way,
+    * but traversing with State is common enough that we can just have a special method for it and write those type annotations
+    * once and for all:
+    */
   def traverseS[S,A,B](fa: F[A])(f: A => State[S, B]): State[S, F[B]] =
     traverse[({ type f[x] = State[S, x]})#f, A,B](fa)(f)(StateMonad.stateMonad)
+
+  //State traversal that labels every element with its position. We keep an integer state, starting with 0, and add 1 at each step
+  def zipWithIndex[A](ta: F[A]): F[(A, Int)] =
+    traverseS(ta)((a: A) => for {
+      i <- get[Int]
+      _ <- set(i + 1)
+    } yield (a, i)).run(0)._1
+
+  def toList1[A](fa: F[A]): List[A] =
+    traverseS(fa)((a: A) => for {
+      as <- get[List[A]]
+      _ <- set(a :: as)
+    } yield ()).run(Nil)._2.reverse
+
+  def mapAccum[S,A,B](fa: F[A], s: S)(f: (A, S) => (B, S)): (F[B], S) =
+    traverseS(fa)((a: A) => for {
+      s1 <- get[S]
+      (b, s2) = f(a, s)
+      _ <- set(s2)
+    } yield b).run(s)
+
+  override def toList[A](fa: F[A]): List[A] = mapAccum(fa, List[A]())((a, s) => ((), a :: s))._2.reverse
+
+  def zipWithIndex[A](fa: F[A]): F[(A, Int)] =
+    mapAccum(fa, 0)((a, s) => ((a, s), s + 1))._1
+
+  def reverse[A](fa: F[A]): F[A] = mapAccum(fa, toList(fa).reverse)((a, s) => (s.head, s.tail))._1
+
+  override def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B = mapAccum(as, z)((a, s) => ((), f(a, s)))._2
+
+  // zip is not able to handle arguments of different "shapes" - e.g. if F is a List then it can't handle lists of different lengths
+  def zip[A,B](fa: F[A], fb: F[B]): F[(A, B)] =
+    mapAccum(fa, toList(fb)) {
+      case (a, Nil) => sys.error("zip: Incompatible shapes.")
+      case (a, b :: bs) => ((a, b), bs)
+    }._1
+
+  // zipL and zipR provide two versions so that the shape of one side or the other is dominant
+  def zipL[A,B](fa: F[A], fb: F[B]): F[(A, Option[B])] =
+    mapAccum(fa, toList(fb)) {
+      case (a, Nil) => ((a, None), Nil)
+      case (a, b :: bs) => ((a, Some(b)), bs)
+    }._1
+
+  def zipR[A,B](fa: F[A], fb: F[B]): F[(Option[A], B)] =
+    mapAccum(fb, toList(fa)) {
+      case (b, Nil) => ((None, b), Nil)
+      case (b, a :: as) => ((Some(a), b), as)
+    }._1
+
+  //EXERCISE 14: Use applicative functor products to write the fusion of two traversals.
+  // This function will, given two functions f and g, traverse fa a single time, collecting the results of both functions at once.
+  def fuse[M[_], N[_], A, B](fa: F[A])(f: A => M[B], g: A => N[B])(M: Applicative[M], N: Applicative[N]): (M[F[B]], N[F[B]]) =
+    traverse[({type f[x] = (M[x], N[x])})#f, A, B](fa)(a => (f(a), g(a)))(M product N)
 
 }
 
