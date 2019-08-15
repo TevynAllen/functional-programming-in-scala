@@ -206,7 +206,7 @@ object Applicative {
     */
 }
 
-trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
+trait Traverse[F[_]] extends Functor[F] with Foldable[F] { self =>
   //traverse preserves the original structure
   def traverse[M[_]: Applicative, A, B](fa: F[A])(f: A => M[B]): M[F[B]]
     ///sequence(map(fa)(f))
@@ -304,6 +304,70 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
   def fuse[M[_], N[_], A, B](fa: F[A])(f: A => M[B], g: A => N[B])(M: Applicative[M], N: Applicative[N]): (M[F[B]], N[F[B]]) =
     traverse[({type f[x] = (M[x], N[x])})#f, A, B](fa)(a => (f(a), g(a)))(M product N)
 
+  /**
+    * If we have a nested structure like Map[K,Option[List[V]]]
+    * then we can traverse the map, the option, and the list at the same time and easily get to the V value inside,
+    * because Map, Option, and List are all traversable.
+    */
+  // EXERCISE 15: Implement the composition of two Traverse instances
+  def compose[G[_]](implicit G: Traverse[G]): Traverse[({type f[x] = F[G[x]]})#f] = new Traverse[({type f[x] = F[G[x]]})#f] {
+    override def traverse[M[_] : Applicative, A, B](fa: F[G[A]])(f: A => M[B]): M[F[G[B]]] =
+      self.traverse(fa)(ga => G.traverse(ga)(a => f(a)))
+  }
+
+  /**
+    * Monad composition - Applicative instances always compose, but Monad instances do not.
+    *
+    * in order to implement a join for nested monads M and N you would have to write something like M[N[M[N[A]]] => M[N[A]]
+    * that cannot be written generically
+    *
+    * if N also happens to have a Traverse instance, we can sequence to turn [N[M_]] into M[N[_]] - which means M[M[N[N[A]]]].
+    * then we can join the adjacent M layers as well as the adjacent M layers using their Monad instances
+    */
+  def composeM[M[_], N[_]](M: Monad[M], N: Monad[N], T: Traverse[N]): Monad[({type f[x] = M[N[x]]})#f] = new Monad[({type f[x] = M[N[x]]})#f] {
+    override def unit[A](a: => A): M[N[A]] = M.unit(N.unit(a))
+
+    override def flatMap[A, B](mna: M[N[A]])(f: A => M[N[B]]): M[N[B]] = M.flatMap(mna)(na => M.map(T.traverse(na)(f))(N.join))
+
+    /**
+      * While the types always allow this,
+      * the result fails to meet the monad laws unless the traversable monad is also a commutative monad.
+      *
+      * Commutative monads are monads for which the order of actions makes no difference
+      *
+      * Two examples of commutative monads are Reader and Option. Two examples of monads that are not commutative are List and State.
+      */
+  }
+
+
+  // Expressivity and power often comes at the price of compositionality and modularity
+  // lehmans terms -
+  // the depth and power of ideas that can be represented and communicated in Scala often comes at the price of
+  // complex expressions which are determined by the modular expressions and rules used to combine them
+
+  /**
+    * The issue with composing monads are often addressed with a custom-written version
+    * of each monad that is specifically constructed for composition - this is called a monad transformer
+    */
+
+  /**
+    * Monad transformers
+    * A monad transformer is a data type that composes a particular monad with any other monad,
+    * giving us a composite monad that shares the behavior of both.
+    *
+    * There is no general way of composing monads. Therefore we have to have a specific transformer for each monad.
+    *
+    * For example, OptionT is a monad transformer that adds the behavior of Option to any other monad.
+    * The type OptionT[M, A] behaves like the composite monad M[Option[_]].
+    * Its flatMap method binds over both the M and the Option inside, saving us from having to do the gymanstics of binding over both.
+    */
+  case class OptionT[M[_], A](value: M[Option[A]])(implicit M: Monad[M]) {
+    def flatMap[B](f: A => OptionT[M, A]): OptionT[M, B] =
+      OptionT(value flatMap {
+        case None => M.unit(None)
+        case Some(a) => f(a).value
+      })
+  }
 }
 
 case class Tree[+A](head: A, tail: List[Tree[A]])
